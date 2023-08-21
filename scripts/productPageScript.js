@@ -17,6 +17,9 @@
 
 // modal
 
+
+
+
 const itemImage = document.querySelectorAll(".itemImageGalleryContainer")
 // const subGallery = document.querySelectorAll(".subGallery")
 const itemContainer = document.querySelector(".itemImageGallery")
