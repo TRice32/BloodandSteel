@@ -34,17 +34,17 @@ itemImage.forEach(item => (item.addEventListener("click", (e) => {
 const menu = document.querySelector(".menuContainer")
 const burger = document.querySelector(".burgerContainer")
 const burgerInput = document.querySelector("#burger")
-// burger.addEventListener("click", function() {
-//     menu.classList.toggle("menuContainerSelected")
-//     menuContainerSelected = !menuContainerSelected
-// })
-
-document.addEventListener('keydown', function(e) {
-    if(e.key === "Escape" && burgerInput.checked) {
-        burgerInput.checked = false
-        menu.classList.toggle("menuContainerSelected")
-    }
+burger.addEventListener("click", function() {
+    // menu.classList.toggle("menuContainerSelected")
+    // menuContainerSelected = !menuContainerSelected
 })
+
+// document.addEventListener('keydown', function(e) {
+//     if(e.key === "Escape" && burgerInput.checked) {
+//         burgerInput.checked = false
+//         menu.classList.toggle("menuContainerSelected")
+//     }
+// })
 
 
 
@@ -128,7 +128,7 @@ images.forEach(img => {
     })
 })
 
-// add item to cart
+console.log(addToCartButton)
 
 const productPage = document.querySelector(".itemMainPage");
 const cartSlider = document.querySelector(".cartSliderContainerInner")
@@ -163,60 +163,64 @@ products.forEach((product) => {
             menuCartNumbers()
             assignProduct(product)
             updateCart()
-            cartSliderOuter.style.transform = "translateX(0)";
             cartDisplay = true
+            cartSliderOuter.style.transform = "translateX(0)";
             menu.classList.remove("menuContainerSelected")
+            checkoutButton.style.display = "block"
+            continueShop.innerHTML = "Continue shopping"
         }
     })
 )})
 
 burger.addEventListener("click", function() {
+    console.log(cartDisplay, menuContainerSelected);
     menu.classList.toggle("menuContainerSelected")
     menuContainerSelected = !menuContainerSelected
     // console.log(cartDisplay);
     if(cartDisplay == true) {
-        cartSliderOuter.style.transform = "translateX(500px)"
-        // console.log(hello);
-    }
-})
-
-
-cartNumbersDisplay.addEventListener("click", () => {
-    if(cartDisplay == false) {
-        
-        // menu.classList.contains("menuContainerSelected")
-        
-        
-        cartSliderOuter.style.transform = "translateX(0)"
-        cartDisplay = true;
-        if(menuContainerSelected == true && cartDisplay == true) {
-            // cartSliderOuter.style.transform = "translateX(0px)"
-            menuContainerSelected = !menuContainerSelected
-            menu.classList.toggle("menuContainerSelected")
-            
-        } else {
-            
-            console.log(menuContainerSelected);
-        }
-    } else {
         cartSliderOuter.style.transform = "translateX(500px)"
         cartDisplay = false
     }
 })
 
 
+cartNumbersDisplay.addEventListener("click", () => {
+    console.log(cartDisplay, menuContainerSelected);
+    if(!cartDisplay && menuContainerSelected) {
+        cartSliderOuter.style.transform = "translateX(0)"
+        cartDisplay = true;
+        
+        
+    } else if(!cartDisplay && !menuContainerSelected) {
+        cartDisplay = true;
+        cartSliderOuter.style.transform = "translateX(0)"
+    } 
+    else {
+        cartSliderOuter.style.transform = "translateX(500px)"
+        cartDisplay = false
+    }
+
+    if(cartNumbers === 0) {
+        checkoutButton.style.display = "none"
+        continueShop.innerHTML = "Start shopping"
+        localStorage.setItem("totalCost", 0)
+    }
+    menu.classList.remove("menuContainerSelected")
+})
+
+
 // TO DO: update menuCartNumbers, update storage: updateCart, totalCost, productsInCart (DONE ALL I THINK)...
 // burger menu click slides away cart and vice versa---done!!!
+// proceed to checkout display behaving oddly -- fixed
 // new issue (sigh)... when removed items are added back, the incart isn't reset, adds on to previous incart number--- fixed!!
 // ! new to do: single + - for items,
-// ! proceed to checkout display behaving oddly
 // ! make addtocart link target whole button instead of just word
 // !create dedicated function that handles translateX and toggle menuContainer etc to prevent repeating same code kinda
 
 
 function removeItem(id, incart) {
     let items = Object.values(cartItems)
-    
+    let total = localStorage.getItem("totalCost")
     cartItems = items.filter(product1 => product1.id != id)
 
     cartItems = cartItems.reduce((acc, val) => {
@@ -225,27 +229,22 @@ function removeItem(id, incart) {
     
         // console.log(cartItems);
         cartNumbers -= incart;
-        // console.log(cartNumbers);
-    // itemIsRemoved = true;
+
     if(!(itemRemoved.includes(id))) {
-        // console.log("yola");
         itemRemoved.push(id);
     } 
-    console.log(itemRemoved);
     removeTrigger = true;
     menuCartNumbers()
     updateCart()
     
     if(cartNumbers === 0) {
         checkoutButton.style.display = "none"
-        continueShop.innerHTML = "Start Shopping"
+        continueShop.innerHTML = "Start shopping"
+        localStorage.setItem("totalCost", 0)
     }
 }
 
 function assignProduct(product) {
-    // console.log(cartItems.length);
-    // console.log(itemRemoved.includes(product.id));
-    // console.log(product.id, itemRemoved);
     if(product.instock > 0) {
         if(cartItems.length != 0 && !(itemRemoved.includes(product.id))) {
             
@@ -288,6 +287,7 @@ function assignProduct(product) {
 }
 
 function updateCart() {
+    console.log(cartDisplay, menuContainerSelected);
     updateCartSlider(cartItems)
     // removeItem(product)
     localStorage.setItem("productsInCart", JSON.stringify(cartItems))
@@ -343,6 +343,9 @@ function updateCartSlider(cartItems) {
                     <p>${item.incart} in cart</p>
                     <p>Price: $${item.price} AUD</p>
                     <button class = "removeItem" onclick = "removeItem(${item.id}, ${item.incart})">X Remove</button>
+                    <button class="btn minus" onclick="changeNumberOfUnits('minus', ${item.id})">-</button>
+                    <button class="number">${item.numberOfUnits}</button>
+                    <button class="btn plus" onclick="changeNumberOfUnits('plus', ${item.id})">+</button>    
                 </div>
             </div>
             `
@@ -352,8 +355,10 @@ function updateCartSlider(cartItems) {
         const subtotal = item.map(product => product.incart * product.price)  
  
         const total = subtotal.reduce((acc, val) => acc + val, 0)
-
-        const totalToCart = `<p id = "subtotal">Subtotal (${cartNumbers}) items: $${total} AUD</p>`
+        let numbersText = "item"
+        cartNumbers > 1 ? numbersText += "s" : null
+        
+        const totalToCart = `<p id = "subtotal">Subtotal (${cartNumbers}) ${numbersText}: $${total} AUD</p>`
         getCartSliderItems += totalToCart;
 
         localStorage.setItem("totalCost", total)
@@ -362,9 +367,9 @@ function updateCartSlider(cartItems) {
             
         continueShop.addEventListener("click", () => {
             cartSliderOuter.style.transform = "translateX(500px)";
+            cartDisplay = false;
         })
     } else {
         cartSlider.innerHTML = "Your cart is empty"
-
     }
 }
